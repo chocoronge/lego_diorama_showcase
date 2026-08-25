@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VERSION: 1.5 | Updated: 2026-08-25 -->
+<!-- VERSION: 1.6 | Updated: 2026-08-25 -->
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
@@ -277,6 +277,15 @@
         쇼케이스 연결하기
       </button>
 
+      <button
+        id="otherShowcaseBtn"
+        class="secondary"
+        onclick="forgetCurrentDevice()"
+        style="display:none; margin-bottom:16px;"
+      >
+        다른 쇼케이스 연결
+      </button>
+
       <div id="controls" style="display:none;">
         <div class="section-label">LIGHT SCENES</div>
 
@@ -436,6 +445,10 @@
 
     connectBtn.style.display = "none";
     controls.style.display = "block";
+
+    const otherBtn = document.getElementById("otherShowcaseBtn");
+    if (otherBtn) otherBtn.style.display = "none";
+
     setButtonsEnabled(true);
   }
 
@@ -480,6 +493,12 @@
     connectBtn.style.display = "block";
     connectBtn.disabled = false;
     connectBtn.textContent = "같은 쇼케이스 다시 연결";
+
+    // 연결이 끊긴 상태에서는 다른 쇼케이스도 선택할 수 있게 표시
+    let otherBtn = document.getElementById("otherShowcaseBtn");
+    if (otherBtn) {
+      otherBtn.style.display = "block";
+    }
   }
 
   function forgetCurrentDevice() {
@@ -496,6 +515,10 @@
     connectBtn.style.display = "block";
     connectBtn.textContent = "쇼케이스 연결하기";
     controls.style.display = "none";
+
+    const otherBtn = document.getElementById("otherShowcaseBtn");
+    if (otherBtn) otherBtn.style.display = "none";
+
     setButtonsEnabled(false);
   }
 
