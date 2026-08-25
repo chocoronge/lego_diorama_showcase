@@ -92,7 +92,7 @@
         <button class="btn-disconnect" onclick="disconnectBLE()">👋 연결 끊기</button>
     </div>
 
-    <div class="footer">LEGO Diorama Showcase v4.3 (Cute Edition)</div>
+    <div class="footer">LEGO Diorama Showcase v4.4 (Auto-Refresh Edition)</div>
 </div>
 
 <script>
@@ -108,7 +108,6 @@
             const statusDiv = document.getElementById('status');
             statusDiv.innerText = "🔍 내 레고 기기를 찾는 중...";
 
-            // 1. 기기 요청 (안정성을 위해 필터 정돈)
             bluetoothDevice = await navigator.bluetooth.requestDevice({
                 filters: [{ namePrefix: 'LegoDiorama' }],
                 optionalServices: [SERVICE_UUID]
@@ -123,7 +122,6 @@
             const service = await server.getPrimaryService(SERVICE_UUID);
             bluetoothCharacteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
 
-            // 2. 비밀번호 인증 단계
             let password = prompt("💌 비밀번호를 입력해주세요:");
             
             if (password !== correctPassword) {
@@ -134,11 +132,9 @@
                 return;
             }
 
-            // 인증 성공
             alert("✨ 비밀번호 통과! 환영합니다!");
             await bluetoothCharacteristic.writeValue(new TextEncoder().encode("PIN:OK"));
 
-            // UI 변경 (연결 성공)
             statusDiv.className = "status connected";
             statusDiv.innerText = "🎉 연결 완료 (" + bluetoothDevice.name + ")";
             document.getElementById('connectBtn').style.display = 'none';
@@ -178,15 +174,13 @@
     function onDisconnected() {
         const statusDiv = document.getElementById('status');
         statusDiv.className = "status disconnected";
-        statusDiv.innerText = "💤 블루투스 연결이 해제되었어요.";
-        
-        document.getElementById('connectBtn').style.display = 'block';
-        document.getElementById('connectBtn').disabled = false;
-        document.getElementById('controls').style.display = 'none';
+        statusDiv.innerText = "💤 연결이 끊어졌어요. 잠시 후 재연결을 위해 새로고침됩니다!";
         setButtonsEnabled(false);
         
-        bluetoothDevice = null;
-        bluetoothCharacteristic = null;
+        // 💡 핵심 해결: 연결이 끊기면 1.2초 뒤 페이지를 자동 새로고침하여 블루투스 캐시를 완전 초기화
+        setTimeout(() => {
+            location.reload();
+        }, 1200);
     }
 
     function setButtonsEnabled(enabled) {
