@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VERSION: 1.6 | Updated: 2026-08-25 -->
+<!-- VERSION: 1.8 | Updated: 2026-08-25 -->
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
@@ -324,7 +324,7 @@
             <span class="icon">🌙</span>
             <span>
               <span class="name">Lights Off</span>
-              <span class="desc">조명만 끄고 BLE 연결은 유지</span>
+              <span class="desc">조명 OFF · 연결 유지</span>
             </span>
           </button>
         </div>
@@ -348,6 +348,12 @@
 
   let bluetoothDevice = null;
   let bluetoothCharacteristic = null;
+
+  // 같은 브라우저 탭에서는 새로고침 후에도 인증 상태를 기억합니다.
+  // 탭/브라우저를 완전히 닫으면 sessionStorage가 사라져 다시 비밀번호를 묻게 됩니다.
+  let authenticatedDeviceName =
+    sessionStorage.getItem("showcaseAuthenticatedDevice") || "";
+
   let authenticated = false;
   let isConnecting = false;
 
@@ -394,6 +400,12 @@
       bluetoothCharacteristic =
         await service.getCharacteristic(CHARACTERISTIC_UUID);
 
+      // 이전에 이 탭에서 인증한 바로 그 쇼케이스라면
+      // 같은 기기 재연결/새로고침 후 재선택 시 비밀번호 입력을 생략합니다.
+      authenticated =
+        !!bluetoothDevice?.name &&
+        authenticatedDeviceName === bluetoothDevice.name;
+
       if (!authenticated) {
         const password = prompt("쇼케이스 비밀번호를 입력해 주세요.");
 
@@ -411,6 +423,12 @@
         );
 
         authenticated = true;
+
+        authenticatedDeviceName = bluetoothDevice?.name || "";
+        sessionStorage.setItem(
+          "showcaseAuthenticatedDevice",
+          authenticatedDeviceName
+        );
 
         setStatus(true, "인증이 완료됐어요. 조명을 선택해 보세요.");
         await new Promise(resolve => setTimeout(resolve, 550));
@@ -480,7 +498,9 @@
 
   function onDisconnected() {
     bluetoothCharacteristic = null;
-    authenticated = false;
+
+    // 같은 쇼케이스 재연결 시에는 인증을 유지합니다.
+    // 다른 쇼케이스를 선택하거나 탭/브라우저를 닫으면 다시 인증합니다.
 
     setStatus(
       false,
@@ -509,6 +529,9 @@
     bluetoothDevice = null;
     bluetoothCharacteristic = null;
     authenticated = false;
+    authenticatedDeviceName = "";
+
+    sessionStorage.removeItem("showcaseAuthenticatedDevice");
 
     setStatus(false, "새 쇼케이스를 선택할 준비가 됐어요.");
 
