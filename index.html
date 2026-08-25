@@ -63,7 +63,7 @@
     }
     .btn-off { background: #718096; grid-column: span 2; }
     .btn-warm { background: #ecc94b; color: #744210; }
-    .btn-sunset { background: #ed8936; } /* 노을빛 석양 버튼 색상 */
+    .btn-sunset { background: #ed8936; }
     .btn-wave { background: #319795; grid-column: span 2; }
     .btn-rainbow { background: linear-gradient(135deg, #f56565, #ed8936, #48bb78, #4299e1, #9f7aea); }
     .btn-party { background: #ed64a6; }
@@ -101,6 +101,9 @@
 
     const SERVICE_UUID = "19b10000-e8f2-537e-4f6c-d104768a1214";
     const CHARACTERISTIC_UUID = "19b10001-e8f2-537e-4f6c-d104768a1214";
+    
+    // 💡 [비밀번호 변경] 원하시는 비밀번호로 수정하세요!
+    const correctPassword = "1234";
 
     async function connectBLE() {
       try {
@@ -108,7 +111,8 @@
         box.innerText = "🔍 쇼케이스를 찾는 중이에요...";
 
         bluetoothDevice = await navigator.bluetooth.requestDevice({
-          filters: [{ namePrefix: 'LegoStore' }],
+          // 💡 아두이노 기기 이름 앞부분과 일치해야 합니다 ('LegoDiorama')
+          filters: [{ namePrefix: 'LegoDiorama' }],
           optionalServices: [SERVICE_UUID]
         });
 
@@ -119,10 +123,22 @@
         bluetoothCharacteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
 
         let pin = prompt("🔒 쇼케이스 비밀번호를 입력하세요:", "");
-        if (pin !== null && pin !== "") {
-          const encoder = new TextEncoder();
-          await bluetoothCharacteristic.writeValue(encoder.encode("PIN:" + pin));
+        
+        if (pin === null) {
+          await server.disconnect();
+          setConnectedUI(false);
+          return;
         }
+
+        if (pin !== correctPassword) {
+          alert("❌ 비밀번호가 틀렸습니다! 다시 확인해주세요.");
+          await server.disconnect();
+          setConnectedUI(false);
+          return;
+        }
+
+        const encoder = new TextEncoder();
+        await bluetoothCharacteristic.writeValue(encoder.encode("PIN:" + pin));
 
         setConnectedUI(true);
       } catch (error) {
