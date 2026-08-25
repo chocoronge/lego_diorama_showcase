@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#f7f5ff" />
-  <title>LEGO Diorama Showcase</title>
+  <title>Diorama Showcase</title>
 
   <style>
     :root {
@@ -80,10 +80,11 @@
     }
 
     h1 {
-      font-size: clamp(27px, 7vw, 34px);
-      line-height: 1.03;
+      font-size: clamp(22px, 5.4vw, 29px);
+      line-height: 1.05;
       margin: 0;
       letter-spacing: -.04em;
+      white-space: nowrap;
     }
 
     .spark {
@@ -260,8 +261,8 @@
     <section class="card">
       <div class="topline">
         <div class="brand">
-          <div class="brand-kicker">SMART DIORAMA</div>
-          <h1><span class="spark">✦</span> LEGO Showcase</h1>
+          <div class="brand-kicker">SMART LIGHTING</div>
+          <h1><span class="spark">✦</span> DIORAMA SHOWCASE</h1>
         </div>
         <div class="version">BLE 5.0</div>
       </div>
@@ -325,8 +326,7 @@
       </div>
 
       <div class="hint">
-        연결이 끊기면 쇼케이스가 주황색으로 두 번 짧게 깜빡인 뒤,
-        마지막 조명 모드로 돌아갑니다.
+        연결이 끊기면 주황색으로 두 번 짧게 깜빡인 뒤 마지막 모드로 돌아갑니다.
       </div>
     </section>
   </main>
@@ -359,10 +359,10 @@
 
     try {
       if (!bluetoothDevice) {
-        setStatus(false, "가까운 LEGO 쇼케이스를 찾고 있어요…");
+        setStatus(false, "가까운 쇼케이스를 찾고 있어요…");
 
         bluetoothDevice = await navigator.bluetooth.requestDevice({
-          filters: [{ namePrefix: "LegoDiorama" }],
+          filters: [{ namePrefix: "Showcase" }],
           optionalServices: [SERVICE_UUID]
         });
 
@@ -384,8 +384,6 @@
       bluetoothCharacteristic =
         await service.getCharacteristic(CHARACTERISTIC_UUID);
 
-      // 연결이 끊기면 authenticated=false로 초기화되므로
-      // 같은 쇼케이스 재연결 시에도 비밀번호를 다시 입력함.
       if (!authenticated) {
         const password = prompt("쇼케이스 비밀번호를 입력해 주세요.");
 
@@ -404,7 +402,6 @@
 
         authenticated = true;
 
-        // 촌스러운 별도 alert 대신 상태 카드에서 자연스럽게 안내
         setStatus(true, "인증이 완료됐어요. 조명을 선택해 보세요.");
         await new Promise(resolve => setTimeout(resolve, 550));
       }
@@ -413,11 +410,14 @@
 
     } catch (error) {
       console.error("BLE 연결 실패:", error);
+
       setStatus(false, "연결하지 못했어요. 잠시 후 다시 시도해 주세요.");
+
       connectBtn.style.display = "block";
       connectBtn.textContent = bluetoothDevice
         ? "같은 쇼케이스 다시 연결"
         : "쇼케이스 연결하기";
+
       controls.style.display = "none";
       setButtonsEnabled(false);
 
@@ -430,7 +430,7 @@
   function setConnectedUI() {
     setStatus(
       true,
-      `연결됨 · ${bluetoothDevice?.name || "LegoDiorama"}`
+      `연결됨 · ${bluetoothDevice?.name || "Showcase"}`
     );
 
     connectBtn.style.display = "none";
@@ -466,8 +466,6 @@
 
   function onDisconnected() {
     bluetoothCharacteristic = null;
-
-    // 재연결할 때도 다시 비밀번호 확인
     authenticated = false;
 
     setStatus(
@@ -504,6 +502,7 @@
     status.className = connected
       ? "status connected"
       : "status disconnected";
+
     statusText.textContent = text;
   }
 
