@@ -4,9 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🧸 레고 디오라마 쇼케이스</title>
+
     <style>
         body {
-            font-family: 'Jua', 'Segoe UI', sans-serif, AppleSDGothicNeo;
+            font-family:
+                'Jua',
+                'Segoe UI',
+                'Segoe UI Emoji',
+                'Apple Color Emoji',
+                'Noto Color Emoji',
+                AppleSDGothicNeo,
+                sans-serif;
+
             background: linear-gradient(135deg, #fbcfe8 0%, #e0e7ff 100%);
             color: #475569;
             display: flex;
@@ -15,7 +24,18 @@
             min-height: 100vh;
             margin: 0;
             padding: 20px;
+            box-sizing: border-box;
         }
+
+        /* 이모지가 일반 폰트 때문에 네모로 표시되는 현상 방지 */
+        .emoji {
+            font-family:
+                'Segoe UI Emoji',
+                'Apple Color Emoji',
+                'Noto Color Emoji',
+                sans-serif;
+        }
+
         .container {
             width: 100%;
             max-width: 380px;
@@ -26,9 +46,20 @@
             text-align: center;
             border: 3px solid #fde2e4;
         }
-        h1 { font-size: 1.6rem; margin-bottom: 5px; color: #db2777; }
-        .subtitle { font-size: 0.85rem; color: #94a3b8; margin-bottom: 20px; font-weight: bold; }
-        
+
+        h1 {
+            font-size: 1.6rem;
+            margin-bottom: 5px;
+            color: #db2777;
+        }
+
+        .subtitle {
+            font-size: 0.85rem;
+            color: #94a3b8;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+
         .status {
             font-size: 0.9rem;
             margin-bottom: 20px;
@@ -38,8 +69,18 @@
             font-weight: bold;
             transition: 0.3s;
         }
-        .status.connected { background: #dcfce7; color: #15803d; border: 2px dashed #86efac; }
-        .status.disconnected { background: #fee2e2; color: #b91c1c; border: 2px dashed #fca5a5; }
+
+        .status.connected {
+            background: #dcfce7;
+            color: #15803d;
+            border: 2px dashed #86efac;
+        }
+
+        .status.disconnected {
+            background: #fee2e2;
+            color: #b91c1c;
+            border: 2px dashed #fca5a5;
+        }
 
         button {
             width: 100%;
@@ -53,144 +94,574 @@
             transition: all 0.2s ease;
             box-shadow: 0 4px 6px rgba(0,0,0,0.05);
         }
-        button:active { transform: scale(0.97); }
-        button:disabled { background: #e2e8f0 !important; color: #94a3b8; cursor: not-allowed; box-shadow: none; }
-        
-        #connectBtn { background: #f472b6; color: white; font-size: 1.1rem; }
-        #connectBtn:hover:not(:disabled) { background: #ec4899; }
 
-        .control-group { display: flex; flex-direction: column; gap: 10px; margin-top: 15px; }
-        .btn-mode { background: #fdf2f8; color: #be185d; border: 2px solid #fbcfe8; }
-        .btn-mode:hover:not(:disabled) { background: #fce7f3; }
-        
-        .btn-off { background: #fee2e2; color: #991b1b; border: 2px solid #fecaca; }
-        .btn-off:hover:not(:disabled) { background: #fecaca; }
-        
-        .btn-disconnect { background: #e2e8f0; color: #64748b; margin-top: 5px; }
-        .btn-disconnect:hover { background: #cbd5e1; }
+        button:active {
+            transform: scale(0.97);
+        }
 
-        .footer { margin-top: 25px; font-size: 0.75rem; color: #cbd5e1; }
+        button:disabled {
+            background: #e2e8f0 !important;
+            color: #94a3b8 !important;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        #connectBtn {
+            background: #f472b6;
+            color: white;
+            font-size: 1.1rem;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .btn-mode {
+            background: #fdf2f8;
+            color: #be185d;
+            border: 2px solid #fbcfe8;
+        }
+
+        .btn-off {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 2px solid #fecaca;
+        }
+
+        .btn-disconnect {
+            background: #e2e8f0;
+            color: #64748b;
+            margin-top: 5px;
+        }
+
+        .btn-reset {
+            background: #f8fafc;
+            color: #64748b;
+            border: 1px solid #cbd5e1;
+            font-size: 0.85rem;
+        }
+
+        .footer {
+            margin-top: 25px;
+            font-size: 0.75rem;
+            color: #cbd5e1;
+        }
     </style>
 </head>
+
 <body>
 
 <div class="container">
-    <h1>🪄 LEGO Showcase</h1>
-    <div class="subtitle">말랑말랑 스마트 무드등 제어 센터</div>
 
-    <div id="status" class="status disconnected">💤 블루투스 연결을 기다리는 중이에요!</div>
+    <h1>
+        <span class="emoji">🪄</span> LEGO Showcase
+    </h1>
 
-    <button id="connectBtn" onclick="connectBLE()">✨ 블루투스 기기 톡! 연결하기</button>
-
-    <div id="controls" class="control-group" style="display:none;">
-        <button class="btn-mode" onclick="sendMode('warm')" id="btn-warm" disabled>🍯 포근한 감성 무드등</button>
-        <button class="btn-mode" onclick="sendMode('sunset')" id="btn-sunset" disabled>🌅 살랑살랑 노을빛</button>
-        <button class="btn-mode" onclick="sendMode('wave')" id="btn-wave" disabled>🌊 시원한 오션 웨이브</button>
-        <button class="btn-mode" onclick="sendMode('rainbow')" id="btn-rainbow" disabled>🌈 알록달록 무지개 파티</button>
-        <button class="btn-mode" onclick="sendMode('party')" id="btn-party" disabled>🎉 몽환적인 클럽 파티</button>
-        <button class="btn-off" onclick="sendMode('off')" id="btn-off" disabled>🌙 조명 잠시 끄기</button>
-        <button class="btn-disconnect" onclick="disconnectBLE()">👋 연결 끊기</button>
+    <div class="subtitle">
+        ESP32-C3 BLE 스마트 무드등 제어 센터
     </div>
 
-    <div class="footer">LEGO Diorama Showcase v4.4 (Auto-Refresh Edition)</div>
+    <div id="status" class="status disconnected">
+        💤 블루투스 연결을 기다리는 중이에요!
+    </div>
+
+    <button id="connectBtn" onclick="connectBLE()">
+        ✨ 블루투스 기기 톡! 연결하기
+    </button>
+
+    <div id="controls" class="control-group" style="display:none;">
+
+        <button class="btn-mode" onclick="sendMode('warm')" id="btn-warm" disabled>
+            🍯 포근한 감성 무드등
+        </button>
+
+        <button class="btn-mode" onclick="sendMode('sunset')" id="btn-sunset" disabled>
+            🌅 살랑살랑 노을빛
+        </button>
+
+        <button class="btn-mode" onclick="sendMode('wave')" id="btn-wave" disabled>
+            🌊 시원한 오션 웨이브
+        </button>
+
+        <button class="btn-mode" onclick="sendMode('rainbow')" id="btn-rainbow" disabled>
+            🌈 알록달록 무지개 파티
+        </button>
+
+        <button class="btn-mode" onclick="sendMode('party')" id="btn-party" disabled>
+            🎉 몽환적인 클럽 파티
+        </button>
+
+        <button class="btn-off" onclick="sendMode('off')" id="btn-off" disabled>
+            🌙 조명 잠시 끄기
+        </button>
+
+        <button class="btn-disconnect" onclick="disconnectBLE()">
+            👋 연결 끊기
+        </button>
+
+    </div>
+
+    <button
+        id="newDeviceBtn"
+        class="btn-reset"
+        onclick="forgetCurrentDevice()"
+        style="display:none;"
+    >
+        🔄 다른 쇼케이스 선택하기
+    </button>
+
+    <div class="footer">
+        LEGO Diorama Showcase · Stable BLE Reconnect Edition
+    </div>
+
 </div>
 
 <script>
-    const correctPassword = "1234"; // 💡 필요시 비밀번호 수정
-    const SERVICE_UUID = "19b10000-e8f2-537e-4f6c-d104768a1214";
-    const CHARACTERISTIC_UUID = "19b10001-e8f2-537e-4f6c-d104768a1214";
 
-    let bluetoothDevice = null;
-    let bluetoothCharacteristic = null;
+const correctPassword = "1234";
 
-    async function connectBLE() {
-        try {
-            const statusDiv = document.getElementById('status');
-            statusDiv.innerText = "🔍 내 레고 기기를 찾는 중...";
+const SERVICE_UUID =
+    "19b10000-e8f2-537e-4f6c-d104768a1214";
 
-            bluetoothDevice = await navigator.bluetooth.requestDevice({
-                filters: [{ namePrefix: 'LegoDiorama' }],
-                optionalServices: [SERVICE_UUID]
-            });
+const CHARACTERISTIC_UUID =
+    "19b10001-e8f2-537e-4f6c-d104768a1214";
 
-            bluetoothDevice.addEventListener('gattserverdisconnected', onDisconnected);
+let bluetoothDevice = null;
+let bluetoothCharacteristic = null;
 
-            statusDiv.innerText = "🔗 쇼케이스와 손잡는 중...";
-            const server = await bluetoothDevice.gatt.connect();
+let authenticated = false;
+let isConnecting = false;
 
-            statusDiv.innerText = "📡 통신 채널 여는 중...";
-            const service = await server.getPrimaryService(SERVICE_UUID);
-            bluetoothCharacteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
+const statusDiv =
+    document.getElementById("status");
 
-            let password = prompt("💌 비밀번호를 입력해주세요:");
-            
-            if (password !== correctPassword) {
-                alert("앗! 비밀번호가 틀렸어요. 다시 시도해 주세요! 🥲");
-                if (bluetoothDevice && bluetoothDevice.gatt.connected) {
-                    bluetoothDevice.gatt.disconnect();
+const connectBtn =
+    document.getElementById("connectBtn");
+
+const controls =
+    document.getElementById("controls");
+
+const newDeviceBtn =
+    document.getElementById("newDeviceBtn");
+
+
+async function connectBLE() {
+
+    if (isConnecting) return;
+
+    if (!navigator.bluetooth) {
+
+        alert(
+            "이 브라우저는 Web Bluetooth를 지원하지 않습니다."
+        );
+
+        return;
+    }
+
+    isConnecting = true;
+    connectBtn.disabled = true;
+
+    try {
+
+        /* 처음 연결할 때만
+           Bluetooth 기기 선택창 표시 */
+
+        if (!bluetoothDevice) {
+
+            statusDiv.className =
+                "status disconnected";
+
+            statusDiv.innerText =
+                "🔍 내 레고 기기를 찾는 중...";
+
+            bluetoothDevice =
+                await navigator.bluetooth.requestDevice({
+
+                    filters: [
+                        {
+                            namePrefix:
+                                "LegoDiorama"
+                        }
+                    ],
+
+                    optionalServices: [
+                        SERVICE_UUID
+                    ]
+
+                });
+
+
+            bluetoothDevice.addEventListener(
+                "gattserverdisconnected",
+                onDisconnected
+            );
+
+        }
+
+
+        statusDiv.innerText =
+            "🔗 쇼케이스와 연결하는 중...";
+
+
+        /* 이미 선택했던 ESP32라면
+           다시 기기 검색을 하지 않고
+           바로 재연결 */
+
+        const server =
+            bluetoothDevice.gatt.connected
+
+            ? bluetoothDevice.gatt
+
+            : await bluetoothDevice.gatt.connect();
+
+
+        statusDiv.innerText =
+            "📡 통신 채널 여는 중...";
+
+
+        const service =
+            await server.getPrimaryService(
+                SERVICE_UUID
+            );
+
+
+        bluetoothCharacteristic =
+            await service.getCharacteristic(
+                CHARACTERISTIC_UUID
+            );
+
+
+        /* 같은 페이지에서는
+           최초 연결 때만 PIN 확인 */
+
+        if (!authenticated) {
+
+            const password =
+                prompt(
+                    "💌 비밀번호를 입력해주세요:"
+                );
+
+
+            if (
+                password !==
+                correctPassword
+            ) {
+
+                alert(
+                    "앗! 비밀번호가 틀렸어요. 다시 시도해 주세요! 🥲"
+                );
+
+
+                if (
+                    bluetoothDevice &&
+                    bluetoothDevice.gatt.connected
+                ) {
+
+                    bluetoothDevice
+                        .gatt
+                        .disconnect();
+
                 }
+
                 return;
             }
 
-            alert("✨ 비밀번호 통과! 환영합니다!");
-            await bluetoothCharacteristic.writeValue(new TextEncoder().encode("PIN:OK"));
 
-            statusDiv.className = "status connected";
-            statusDiv.innerText = "🎉 연결 완료 (" + bluetoothDevice.name + ")";
-            document.getElementById('connectBtn').style.display = 'none';
-            document.getElementById('controls').style.display = 'flex';
-            
-            setButtonsEnabled(true);
+            await bluetoothCharacteristic
+                .writeValue(
 
-        } catch (error) {
-            console.log("연결 실패:", error);
-            const statusDiv = document.getElementById('status');
-            statusDiv.className = "status disconnected";
-            statusDiv.innerText = "💦 연결이 취소되었거나 실패했어요.";
-            document.getElementById('connectBtn').disabled = false;
+                    new TextEncoder()
+                        .encode("PIN:OK")
+
+                );
+
+
+            authenticated = true;
+
+
+            alert(
+                "✨ 비밀번호 통과! 환영합니다!"
+            );
+
         }
+
+
+        setConnectedUI();
+
     }
 
-    async function sendMode(mode) {
-        if (!bluetoothCharacteristic) {
-            alert("⚠️ 블루투스 연결이 끊어져 있어요!");
-            return;
-        }
-        try {
-            const encoder = new TextEncoder();
-            await bluetoothCharacteristic.writeValue(encoder.encode(mode));
-        } catch (error) {
-            console.log("명령 전송 실패:", error);
-            alert("💦 명령 전달에 실패했어요. 다시 시도해 주세요!");
-        }
-    }
+    catch (error) {
 
-    function disconnectBLE() {
-        if (bluetoothDevice && bluetoothDevice.gatt.connected) {
-            bluetoothDevice.gatt.disconnect();
-        }
-    }
+        console.error(
+            "BLE 연결 실패:",
+            error
+        );
 
-    function onDisconnected() {
-        const statusDiv = document.getElementById('status');
-        statusDiv.className = "status disconnected";
-        statusDiv.innerText = "💤 연결이 끊어졌어요. 잠시 후 재연결을 위해 새로고침됩니다!";
+
+        statusDiv.className =
+            "status disconnected";
+
+
+        statusDiv.innerText =
+            "💦 연결에 실패했어요. 잠시 후 다시 눌러주세요.";
+
+
+        connectBtn.style.display =
+            "block";
+
+
+        connectBtn.innerText =
+            bluetoothDevice
+
+            ? "🔄 같은 쇼케이스 다시 연결"
+
+            : "✨ 블루투스 기기 톡! 연결하기";
+
+
+        controls.style.display =
+            "none";
+
+
         setButtonsEnabled(false);
-        
-        // 💡 핵심 해결: 연결이 끊기면 1.2초 뒤 페이지를 자동 새로고침하여 블루투스 캐시를 완전 초기화
-        setTimeout(() => {
-            location.reload();
-        }, 1200);
+
     }
 
-    function setButtonsEnabled(enabled) {
-        document.getElementById('btn-warm').disabled = !enabled;
-        document.getElementById('btn-sunset').disabled = !enabled;
-        document.getElementById('btn-wave').disabled = !enabled;
-        document.getElementById('btn-rainbow').disabled = !enabled;
-        document.getElementById('btn-party').disabled = !enabled;
-        document.getElementById('btn-off').disabled = !enabled;
+    finally {
+
+        isConnecting = false;
+        connectBtn.disabled = false;
+
     }
+}
+
+
+
+function setConnectedUI() {
+
+    statusDiv.className =
+        "status connected";
+
+
+    statusDiv.innerText =
+        "🎉 연결 완료 (" +
+        (bluetoothDevice?.name ||
+        "LegoDiorama") +
+        ")";
+
+
+    connectBtn.style.display =
+        "none";
+
+
+    controls.style.display =
+        "flex";
+
+
+    newDeviceBtn.style.display =
+        "none";
+
+
+    setButtonsEnabled(true);
+
+}
+
+
+
+async function sendMode(mode) {
+
+    if (
+        !bluetoothDevice ||
+        !bluetoothDevice.gatt.connected ||
+        !bluetoothCharacteristic
+    ) {
+
+        alert(
+            "⚠️ 블루투스 연결이 끊어져 있어요!"
+        );
+
+        return;
+    }
+
+
+    try {
+
+        await bluetoothCharacteristic
+            .writeValue(
+
+                new TextEncoder()
+                    .encode(mode)
+
+            );
+
+
+        console.log(
+            "전송:",
+            mode
+        );
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "명령 전송 실패:",
+            error
+        );
+
+
+        alert(
+            "💦 명령 전달에 실패했어요. 다시 연결해 주세요!"
+        );
+
+    }
+
+}
+
+
+
+function disconnectBLE() {
+
+    if (
+        bluetoothDevice &&
+        bluetoothDevice.gatt.connected
+    ) {
+
+        bluetoothDevice
+            .gatt
+            .disconnect();
+
+    }
+
+}
+
+
+
+function onDisconnected() {
+
+    console.log(
+        "BLE 연결 해제됨"
+    );
+
+
+    bluetoothCharacteristic =
+        null;
+
+
+    statusDiv.className =
+        "status disconnected";
+
+
+    statusDiv.innerText =
+        "💤 연결이 끊어졌어요. 같은 쇼케이스에 다시 연결할 수 있어요!";
+
+
+    controls.style.display =
+        "none";
+
+
+    setButtonsEnabled(false);
+
+
+    connectBtn.style.display =
+        "block";
+
+
+    connectBtn.disabled =
+        false;
+
+
+    connectBtn.innerText =
+        "🔄 같은 쇼케이스 다시 연결";
+
+
+    newDeviceBtn.style.display =
+        "block";
+
+}
+
+
+
+function forgetCurrentDevice() {
+
+    if (
+        bluetoothDevice &&
+        bluetoothDevice.gatt.connected
+    ) {
+
+        bluetoothDevice
+            .gatt
+            .disconnect();
+
+    }
+
+
+    bluetoothDevice =
+        null;
+
+
+    bluetoothCharacteristic =
+        null;
+
+
+    authenticated =
+        false;
+
+
+    statusDiv.className =
+        "status disconnected";
+
+
+    statusDiv.innerText =
+        "🔎 새 쇼케이스를 선택할 준비가 되었어요!";
+
+
+    connectBtn.style.display =
+        "block";
+
+
+    connectBtn.innerText =
+        "✨ 블루투스 기기 톡! 연결하기";
+
+
+    controls.style.display =
+        "none";
+
+
+    newDeviceBtn.style.display =
+        "none";
+
+
+    setButtonsEnabled(false);
+
+}
+
+
+
+function setButtonsEnabled(enabled) {
+
+    [
+        "btn-warm",
+        "btn-sunset",
+        "btn-wave",
+        "btn-rainbow",
+        "btn-party",
+        "btn-off"
+    ]
+
+    .forEach(id => {
+
+        document
+            .getElementById(id)
+            .disabled =
+                !enabled;
+
+    });
+
+}
+
 </script>
 
 </body>
