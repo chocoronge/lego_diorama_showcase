@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VERSION: 2.0 | Updated: 2026-08-25 -->
+<!-- VERSION: 2.2 | Updated: 2026-08-27 | LIVE WEATHER + CITY SELECT -->
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
@@ -249,6 +249,70 @@
       line-height: 1.55;
     }
 
+    .weather-source {
+      margin: 12px 0 2px;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+
+    .weather-select {
+      width: 100%;
+      appearance: none;
+      -webkit-appearance: none;
+      padding: 12px 40px 12px 13px;
+      border-radius: 15px;
+      border: 1px solid var(--line);
+      color: var(--text);
+      background:
+        linear-gradient(45deg, transparent 50%, #77718b 50%) calc(100% - 18px) 50% / 6px 6px no-repeat,
+        linear-gradient(135deg, #77718b 50%, transparent 50%) calc(100% - 13px) 50% / 6px 6px no-repeat,
+        rgba(255,255,255,.78);
+      font: inherit;
+      font-size: 13px;
+      font-weight: 800;
+      outline: none;
+    }
+
+    .weather-source-note {
+      margin: 0 2px;
+      font-size: 10px;
+      line-height: 1.45;
+      color: var(--muted);
+    }
+
+    .weather-panel {
+      margin: 12px 0 2px;
+      padding: 15px 16px;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.68);
+      text-align: left;
+      display: none;
+    }
+
+    .weather-panel.show { display: block; }
+
+    .weather-title {
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: .06em;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .weather-main {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 7px;
+    }
+
+    .weather-icon { font-size: 30px; }
+    .weather-condition { font-size: 17px; font-weight: 900; }
+    .weather-detail { font-size: 12px; color: var(--muted); line-height: 1.55; }
+    .weather-mode { margin-top: 7px; font-size: 12px; font-weight: 850; color: var(--accent); }
+
     @media (max-width: 360px) {
       .mode-grid { grid-template-columns: 1fr; }
       .mode.off { grid-column: auto; }
@@ -289,6 +353,21 @@
       <div id="controls" style="display:none;">
         <div class="section-label">LIGHT SCENES</div>
 
+        <div class="weather-source">
+          <select id="weatherSource" class="weather-select" aria-label="Live Weather 지역 선택">
+            <option value="seoul" selected>📍 서울 · 기본</option>
+            <option value="current">🧭 현재 위치</option>
+            <option value="busan">🌊 부산</option>
+            <option value="jeju">🌴 제주</option>
+            <option value="tokyo">🗼 도쿄</option>
+            <option value="paris">🗼 파리</option>
+            <option value="london">🇬🇧 런던</option>
+            <option value="newyork">🗽 뉴욕</option>
+            <option value="sydney">🇦🇺 시드니</option>
+          </select>
+          <div class="weather-source-note">지역을 고른 뒤 Live Weather를 누르세요. 현재 위치는 브라우저 위치 권한이 필요합니다.</div>
+        </div>
+
         <div class="mode-grid">
           <button class="mode" onclick="sendMode('warm')" id="btn-warm" disabled>
             <span class="icon">☀️</span>
@@ -320,6 +399,12 @@
             <span class="desc">랜덤 컬러 스파클</span>
           </button>
 
+          <button class="mode" onclick="applyLiveWeather()" id="btn-weather" disabled>
+            <span class="icon">🌦️</span>
+            <span class="name">Live Weather</span>
+            <span class="desc">현재 날씨를 조명으로 적용</span>
+          </button>
+
           <button class="mode off" onclick="powerOffShowcase()" id="btn-off" disabled>
             <span class="icon">⏻</span>
             <span>
@@ -327,6 +412,18 @@
               <span class="desc">쇼케이스 전원 종료</span>
             </span>
           </button>
+        </div>
+
+        <div id="weatherPanel" class="weather-panel" aria-live="polite">
+          <div id="weatherTitle" class="weather-title">LIVE WEATHER · 서울</div>
+          <div class="weather-main">
+            <span id="weatherIcon" class="weather-icon">🌦️</span>
+            <div>
+              <div id="weatherCondition" class="weather-condition">날씨를 불러오는 중…</div>
+              <div id="weatherDetail" class="weather-detail"></div>
+            </div>
+          </div>
+          <div id="weatherMode" class="weather-mode"></div>
         </div>
 
         <div class="bottom-actions">
@@ -346,6 +443,17 @@
   const SERVICE_UUID = "19b10000-e8f2-537e-4f6c-d104768a1214";
   const CHARACTERISTIC_UUID = "19b10001-e8f2-537e-4f6c-d104768a1214";
 
+  const WEATHER_PLACES = {
+    seoul:   { name: "서울",   lat: 37.5665,  lon: 126.9780 },
+    busan:   { name: "부산",   lat: 35.1796,  lon: 129.0756 },
+    jeju:    { name: "제주",   lat: 33.4996,  lon: 126.5312 },
+    tokyo:   { name: "도쿄",   lat: 35.6762,  lon: 139.6503 },
+    paris:   { name: "파리",   lat: 48.8566,  lon: 2.3522 },
+    london:  { name: "런던",   lat: 51.5074,  lon: -0.1278 },
+    newyork: { name: "뉴욕",   lat: 40.7128,  lon: -74.0060 },
+    sydney:  { name: "시드니", lat: -33.8688, lon: 151.2093 }
+  };
+
   let bluetoothDevice = null;
   let bluetoothCharacteristic = null;
 
@@ -362,6 +470,13 @@
   const statusText = document.getElementById("statusText");
   const connectBtn = document.getElementById("connectBtn");
   const controls = document.getElementById("controls");
+  const weatherPanel = document.getElementById("weatherPanel");
+  const weatherSource = document.getElementById("weatherSource");
+  const weatherTitle = document.getElementById("weatherTitle");
+  const weatherIcon = document.getElementById("weatherIcon");
+  const weatherCondition = document.getElementById("weatherCondition");
+  const weatherDetail = document.getElementById("weatherDetail");
+  const weatherMode = document.getElementById("weatherMode");
 
   async function connectBLE() {
     if (isConnecting) return;
@@ -491,6 +606,157 @@
     }
   }
 
+  function getCurrentPosition() {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject(new Error("이 브라우저는 위치 정보를 지원하지 않습니다."));
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        resolve,
+        reject,
+        {
+          enableHighAccuracy: false,
+          timeout: 10000,
+          maximumAge: 300000
+        }
+      );
+    });
+  }
+
+  function weatherInfoFromCode(code, isDay) {
+    // Open-Meteo의 WMO Weather interpretation codes 기준
+    if (code === 0) {
+      return isDay
+        ? { icon: "☀️", label: "맑음", mode: "wx_sunny", modeLabel: "SUNNY LIGHT" }
+        : { icon: "🌙", label: "맑은 밤", mode: "wx_night", modeLabel: "NIGHT LIGHT" };
+    }
+
+    if ([1, 2, 3].includes(code)) {
+      return { icon: "☁️", label: code === 1 ? "대체로 맑음" : "흐림", mode: "wx_cloudy", modeLabel: "CLOUDY LIGHT" };
+    }
+
+    if ([45, 48].includes(code)) {
+      return { icon: "🌫️", label: "안개", mode: "wx_fog", modeLabel: "FOG LIGHT" };
+    }
+
+    if ([51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82, 95, 96, 99].includes(code)) {
+      return { icon: "🌧️", label: "비", mode: "wx_rain", modeLabel: "RAIN LIGHT" };
+    }
+
+    if ([71, 73, 75, 77, 85, 86].includes(code)) {
+      return { icon: "❄️", label: "눈", mode: "wx_snow", modeLabel: "SNOW LIGHT" };
+    }
+
+    return { icon: "🌦️", label: "변화가 있는 날씨", mode: "wx_cloudy", modeLabel: "WEATHER LIGHT" };
+  }
+
+  async function resolveWeatherPlace() {
+    const selected = weatherSource.value;
+
+    if (selected === "current") {
+      weatherTitle.textContent = "LIVE WEATHER · 현재 위치";
+      weatherCondition.textContent = "현재 위치와 날씨를 확인하는 중…";
+      weatherDetail.textContent = "처음 사용할 때 위치 권한을 허용해 주세요.";
+
+      const position = await getCurrentPosition();
+      return {
+        name: "현재 위치",
+        lat: position.coords.latitude,
+        lon: position.coords.longitude
+      };
+    }
+
+    const place = WEATHER_PLACES[selected] || WEATHER_PLACES.seoul;
+    weatherTitle.textContent = `LIVE WEATHER · ${place.name}`;
+    weatherCondition.textContent = `${place.name} 날씨를 확인하는 중…`;
+    weatherDetail.textContent = "실시간 날씨 데이터를 불러오고 있어요.";
+    return place;
+  }
+
+  async function applyLiveWeather() {
+    if (
+      !bluetoothDevice ||
+      !bluetoothDevice.gatt.connected ||
+      !bluetoothCharacteristic
+    ) {
+      alert("먼저 쇼케이스를 연결해 주세요.");
+      return;
+    }
+
+    const button = document.getElementById("btn-weather");
+    button.disabled = true;
+    weatherPanel.classList.add("show");
+    weatherIcon.textContent = "🌦️";
+    weatherMode.textContent = "";
+
+    try {
+      const place = await resolveWeatherPlace();
+
+      const params = new URLSearchParams({
+        latitude: Number(place.lat).toFixed(5),
+        longitude: Number(place.lon).toFixed(5),
+        current: "temperature_2m,weather_code,wind_speed_10m,is_day",
+        timezone: "auto"
+      });
+
+      const response = await fetch(
+        `https://api.open-meteo.com/v1/forecast?${params.toString()}`
+      );
+
+      if (!response.ok) {
+        throw new Error(`날씨 서버 응답 오류 (${response.status})`);
+      }
+
+      const data = await response.json();
+      const current = data.current;
+
+      if (!current) {
+        throw new Error("현재 날씨 정보를 찾지 못했습니다.");
+      }
+
+      const info = weatherInfoFromCode(
+        Number(current.weather_code),
+        Number(current.is_day) === 1
+      );
+
+      await sendMode(info.mode);
+
+      weatherTitle.textContent = `LIVE WEATHER · ${place.name}`;
+      weatherIcon.textContent = info.icon;
+      weatherCondition.textContent = info.label;
+      weatherDetail.textContent =
+        `${Number(current.temperature_2m).toFixed(1)}°C · 풍속 ${Number(current.wind_speed_10m).toFixed(1)} km/h`;
+      weatherMode.textContent =
+        `💡 ${info.modeLabel} 적용됨 · 연결을 해제해도 조명은 유지됩니다.`;
+
+    } catch (error) {
+      console.error("LIVE WEATHER 실패:", error);
+
+      weatherIcon.textContent = "⚠️";
+      weatherCondition.textContent = "날씨를 불러오지 못했어요.";
+
+      if (error && error.code === 1) {
+        weatherDetail.textContent = "위치 권한이 거부되었습니다. 다른 도시를 선택하거나 위치 권한을 허용해 주세요.";
+      } else if (error && error.code === 2) {
+        weatherDetail.textContent = "현재 위치를 확인할 수 없습니다. 다른 도시를 선택해 바로 사용할 수 있어요.";
+      } else if (error && error.code === 3) {
+        weatherDetail.textContent = "위치 확인 시간이 초과되었습니다. 다른 도시를 선택하거나 다시 시도해 주세요.";
+      } else {
+        weatherDetail.textContent = error?.message || "인터넷 연결 상태를 확인한 뒤 다시 시도해 주세요.";
+      }
+
+      weatherMode.textContent = "기존 조명 상태는 변경되지 않았습니다.";
+    } finally {
+      button.disabled = !(
+        bluetoothDevice &&
+        bluetoothDevice.gatt.connected &&
+        bluetoothCharacteristic
+      );
+    }
+  }
+
   async function powerOffShowcase() {
     if (
       !bluetoothDevice ||
@@ -600,6 +866,7 @@
       "btn-wave",
       "btn-rainbow",
       "btn-party",
+      "btn-weather",
       "btn-off"
     ].forEach(id => {
       document.getElementById(id).disabled = !enabled;
