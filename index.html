@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VERSION: 2.3 | Updated: 2026-08-28 | RESPONSIVE DESKTOP UI + LIVE WEATHER -->
+<!-- VERSION: 2.4 | Updated: 2026-08-28 | COMPACT DISCONNECTED UI + RESPONSIVE DASHBOARD + LIVE WEATHER -->
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
@@ -47,8 +47,13 @@
     }
 
     .app {
-      width: min(100%, 860px);
+      width: min(100%, 560px);
       position: relative;
+      transition: width .32s ease;
+    }
+
+    .app.connected-layout {
+      width: min(100%, 860px);
     }
 
     .card {
@@ -246,6 +251,23 @@
       line-height: 1.55;
     }
 
+    .intro-copy {
+      margin: 2px 2px 16px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.65;
+    }
+
+    .intro-copy strong {
+      color: #625b82;
+      font-weight: 900;
+    }
+
+    .app.connected-layout .intro-copy {
+      display: none;
+    }
+
     .weather-source {
       margin: 12px 0 2px;
       display: grid;
@@ -339,7 +361,7 @@
 </head>
 
 <body>
-  <main class="app">
+  <main id="app" class="app">
     <section class="card">
       <div class="topline">
         <div class="brand">
@@ -352,6 +374,11 @@
       <div id="status" class="status disconnected">
         <span class="dot"></span>
         <span id="statusText">쇼케이스 연결을 기다리고 있어요.</span>
+      </div>
+
+      <div id="introCopy" class="intro-copy">
+        <strong>세상의 날씨를, 나의 LEGO 공간으로.</strong><br>
+        쇼케이스를 연결하고 나만의 빛을 시작하세요.
       </div>
 
       <button id="connectBtn" class="primary" onclick="connectBLE()">
@@ -480,6 +507,7 @@
   let isConnecting = false;
   let intentionalPowerOff = false;
 
+  const app = document.getElementById("app");
   const status = document.getElementById("status");
   const statusText = document.getElementById("statusText");
   const connectBtn = document.getElementById("connectBtn");
@@ -871,6 +899,13 @@
       : "status disconnected";
 
     statusText.textContent = text;
+
+    // 연결 전에는 컴팩트한 시작 화면, 연결 후에는 넓은 제어 대시보드
+    if (connected) {
+      app.classList.add("connected-layout");
+    } else {
+      app.classList.remove("connected-layout");
+    }
   }
 
   function setButtonsEnabled(enabled) {
