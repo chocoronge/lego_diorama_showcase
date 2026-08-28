@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VERSION: 2.2 | Updated: 2026-08-27 | LIVE WEATHER + CITY SELECT -->
+<!-- VERSION: 2.3 | Updated: 2026-08-28 | RESPONSIVE DESKTOP UI + LIVE WEATHER -->
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
@@ -47,7 +47,7 @@
     }
 
     .app {
-      width: min(100%, 430px);
+      width: min(100%, 860px);
       position: relative;
     }
 
@@ -174,8 +174,8 @@
 
     .mode-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
     }
 
     .mode {
@@ -215,16 +215,13 @@
     }
 
     .mode.off {
-      grid-column: 1 / -1;
-      min-height: 62px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
+      min-height: 92px;
+      display: block;
       background: rgba(255,246,248,.86);
       color: #8e3b4f;
     }
 
-    .mode.off .icon { margin: 0; }
+    .mode.off .icon { margin-bottom: 10px; }
 
     .bottom-actions {
       display: grid;
@@ -252,8 +249,9 @@
     .weather-source {
       margin: 12px 0 2px;
       display: grid;
-      grid-template-columns: 1fr;
-      gap: 8px;
+      grid-template-columns: minmax(0, 1fr) 150px;
+      gap: 10px;
+      align-items: center;
     }
 
     .weather-select {
@@ -274,7 +272,18 @@
       outline: none;
     }
 
+    .weather-action {
+      height: 46px;
+      border-radius: 15px;
+      color: #5149b8;
+      background: rgba(236, 239, 255, .94);
+      border: 1px solid rgba(111,99,232,.12);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
     .weather-source-note {
+      grid-column: 1 / -1;
       margin: 0 2px;
       font-size: 10px;
       line-height: 1.45;
@@ -304,7 +313,7 @@
     .weather-main {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
       margin-bottom: 7px;
     }
 
@@ -313,10 +322,18 @@
     .weather-detail { font-size: 12px; color: var(--muted); line-height: 1.55; }
     .weather-mode { margin-top: 7px; font-size: 12px; font-weight: 850; color: var(--accent); }
 
-    @media (max-width: 360px) {
+    @media (max-width: 700px) {
+      body { padding: 16px; }
+      .card { padding: 24px 18px 20px; border-radius: 26px; }
+      .mode-grid { grid-template-columns: 1fr 1fr; }
+      .weather-source { grid-template-columns: 1fr; }
+      .weather-source-note { grid-column: auto; }
+    }
+
+    @media (max-width: 380px) {
       .mode-grid { grid-template-columns: 1fr; }
-      .mode.off { grid-column: auto; }
       .bottom-actions { grid-template-columns: 1fr; }
+      h1 { white-space: normal; }
     }
   </style>
 </head>
@@ -351,7 +368,7 @@
       </button>
 
       <div id="controls" style="display:none;">
-        <div class="section-label">LIGHT SCENES</div>
+        <div class="section-label">LIVE WEATHER</div>
 
         <div class="weather-source">
           <select id="weatherSource" class="weather-select" aria-label="Live Weather 지역 선택">
@@ -365,8 +382,23 @@
             <option value="newyork">🗽 뉴욕</option>
             <option value="sydney">🇦🇺 시드니</option>
           </select>
+          <button class="weather-action" onclick="applyLiveWeather()" id="btn-weather" disabled>🌦️ Live Weather</button>
           <div class="weather-source-note">지역을 고른 뒤 Live Weather를 누르세요. 현재 위치는 브라우저 위치 권한이 필요합니다.</div>
         </div>
+
+        <div id="weatherPanel" class="weather-panel" aria-live="polite">
+          <div id="weatherTitle" class="weather-title">LIVE WEATHER · 서울</div>
+          <div class="weather-main">
+            <span id="weatherIcon" class="weather-icon">🌦️</span>
+            <div>
+              <div id="weatherCondition" class="weather-condition">날씨를 불러오는 중…</div>
+              <div id="weatherDetail" class="weather-detail"></div>
+            </div>
+          </div>
+          <div id="weatherMode" class="weather-mode"></div>
+        </div>
+
+        <div class="section-label">LIGHT SCENES</div>
 
         <div class="mode-grid">
           <button class="mode" onclick="sendMode('warm')" id="btn-warm" disabled>
@@ -399,12 +431,6 @@
             <span class="desc">랜덤 컬러 스파클</span>
           </button>
 
-          <button class="mode" onclick="applyLiveWeather()" id="btn-weather" disabled>
-            <span class="icon">🌦️</span>
-            <span class="name">Live Weather</span>
-            <span class="desc">현재 날씨를 조명으로 적용</span>
-          </button>
-
           <button class="mode off" onclick="powerOffShowcase()" id="btn-off" disabled>
             <span class="icon">⏻</span>
             <span>
@@ -412,18 +438,6 @@
               <span class="desc">쇼케이스 전원 종료</span>
             </span>
           </button>
-        </div>
-
-        <div id="weatherPanel" class="weather-panel" aria-live="polite">
-          <div id="weatherTitle" class="weather-title">LIVE WEATHER · 서울</div>
-          <div class="weather-main">
-            <span id="weatherIcon" class="weather-icon">🌦️</span>
-            <div>
-              <div id="weatherCondition" class="weather-condition">날씨를 불러오는 중…</div>
-              <div id="weatherDetail" class="weather-detail"></div>
-            </div>
-          </div>
-          <div id="weatherMode" class="weather-mode"></div>
         </div>
 
         <div class="bottom-actions">
