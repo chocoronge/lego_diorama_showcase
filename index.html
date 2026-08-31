@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VERSION: 2.4 | Updated: 2026-08-28 | COMPACT DISCONNECTED UI + RESPONSIVE DASHBOARD + LIVE WEATHER -->
+<!-- VERSION: 3.1-TFT-BLE-STABLE | Updated: 2026-08-31 | BASED ON v2.4 + TFT DATE/WEATHER SYNC -->
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
@@ -73,9 +73,7 @@
       margin-bottom: 24px;
     }
 
-    .brand {
-      text-align: left;
-    }
+    .brand { text-align: left; }
 
     .brand-kicker {
       font-size: 12px;
@@ -264,9 +262,7 @@
       font-weight: 900;
     }
 
-    .app.connected-layout .intro-copy {
-      display: none;
-    }
+    .app.connected-layout .intro-copy { display: none; }
 
     .weather-source {
       margin: 12px 0 2px;
@@ -368,7 +364,7 @@
           <div class="brand-kicker">SMART LIGHTING</div>
           <h1><span class="spark">✦</span> DIORAMA SHOWCASE</h1>
         </div>
-        <div class="version">BLE 5.0</div>
+        <div class="version">BLE 5.0 · TFT</div>
       </div>
 
       <div id="status" class="status disconnected">
@@ -381,9 +377,7 @@
         쇼케이스를 연결하고 나만의 빛을 시작하세요.
       </div>
 
-      <button id="connectBtn" class="primary" onclick="connectBLE()">
-        쇼케이스 연결하기
-      </button>
+      <button id="connectBtn" class="primary" onclick="connectBLE()">쇼케이스 연결하기</button>
 
       <button
         id="otherShowcaseBtn"
@@ -485,27 +479,28 @@
   const CHARACTERISTIC_UUID = "19b10001-e8f2-537e-4f6c-d104768a1214";
 
   const WEATHER_PLACES = {
-    seoul:   { name: "서울",   lat: 37.5665,  lon: 126.9780 },
-    busan:   { name: "부산",   lat: 35.1796,  lon: 129.0756 },
-    jeju:    { name: "제주",   lat: 33.4996,  lon: 126.5312 },
-    tokyo:   { name: "도쿄",   lat: 35.6762,  lon: 139.6503 },
-    paris:   { name: "파리",   lat: 48.8566,  lon: 2.3522 },
-    london:  { name: "런던",   lat: 51.5074,  lon: -0.1278 },
-    newyork: { name: "뉴욕",   lat: 40.7128,  lon: -74.0060 },
-    sydney:  { name: "시드니", lat: -33.8688, lon: 151.2093 }
+    seoul:   { name: "서울",   tftName: "SEOUL",   lat: 37.5665,  lon: 126.9780 },
+    busan:   { name: "부산",   tftName: "BUSAN",   lat: 35.1796,  lon: 129.0756 },
+    jeju:    { name: "제주",   tftName: "JEJU",    lat: 33.4996,  lon: 126.5312 },
+    tokyo:   { name: "도쿄",   tftName: "TOKYO",   lat: 35.6762,  lon: 139.6503 },
+    paris:   { name: "파리",   tftName: "PARIS",   lat: 48.8566,  lon: 2.3522 },
+    london:  { name: "런던",   tftName: "LONDON",  lat: 51.5074,  lon: -0.1278 },
+    newyork: { name: "뉴욕",   tftName: "NEW YORK",lat: 40.7128,  lon: -74.0060 },
+    sydney:  { name: "시드니", tftName: "SYDNEY",  lat: -33.8688, lon: 151.2093 }
   };
 
   let bluetoothDevice = null;
   let bluetoothCharacteristic = null;
 
-  // 같은 브라우저 탭에서는 새로고침 후에도 인증 상태를 기억합니다.
-  // 탭/브라우저를 완전히 닫으면 sessionStorage가 사라져 다시 비밀번호를 묻게 됩니다.
   let authenticatedDeviceName =
     sessionStorage.getItem("showcaseAuthenticatedDevice") || "";
 
   let authenticated = false;
   let isConnecting = false;
   let intentionalPowerOff = false;
+
+  // BLE write를 항상 1개씩 순서대로 처리해 동시 write 충돌을 방지합니다.
+  let bleWriteQueue = Promise.resolve();
 
   const app = document.getElementById("app");
   const status = document.getElementById("status");
@@ -519,6 +514,8 @@
   const weatherCondition = document.getElementById("weatherCondition");
   const weatherDetail = document.getElementById("weatherDetail");
   const weatherMode = document.getElementById("weatherMode");
+
+  const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
   async function connectBLE() {
     if (isConnecting) return;
@@ -558,8 +555,6 @@
       bluetoothCharacteristic =
         await service.getCharacteristic(CHARACTERISTIC_UUID);
 
-      // 이전에 이 탭에서 인증한 바로 그 쇼케이스라면
-      // 같은 기기 재연결/새로고침 후 재선택 시 비밀번호 입력을 생략합니다.
       authenticated =
         !!bluetoothDevice?.name &&
         authenticatedDeviceName === bluetoothDevice.name;
@@ -576,9 +571,7 @@
           return;
         }
 
-        await bluetoothCharacteristic.writeValue(
-          new TextEncoder().encode("PIN:OK")
-        );
+        await writeBLEText("PIN:OK");
 
         authenticated = true;
 
@@ -589,7 +582,7 @@
         );
 
         setStatus(true, "인증이 완료됐어요. 조명을 선택해 보세요.");
-        await new Promise(resolve => setTimeout(resolve, 550));
+        await sleep(550);
       }
 
       setConnectedUI();
@@ -628,23 +621,53 @@
     setButtonsEnabled(true);
   }
 
-  async function sendMode(mode) {
-    if (
-      !bluetoothDevice ||
-      !bluetoothDevice.gatt.connected ||
-      !bluetoothCharacteristic
-    ) {
-      alert("쇼케이스 연결이 끊어져 있습니다.");
-      return;
-    }
+  function writeBLEText(text) {
+    bleWriteQueue = bleWriteQueue.then(async () => {
+      if (
+        !bluetoothDevice ||
+        !bluetoothDevice.gatt.connected ||
+        !bluetoothCharacteristic
+      ) {
+        throw new Error("쇼케이스 연결이 끊어져 있습니다.");
+      }
 
+      const payload = new TextEncoder().encode(text);
+
+      // PROPERTY_WRITE를 사용하는 ESP32 쪽과 맞춰 가능하면 응답형 write 사용.
+      // 일부 브라우저 구현에서는 writeValue()만 제공할 수 있어 fallback을 둡니다.
+      if (typeof bluetoothCharacteristic.writeValueWithResponse === "function") {
+        await bluetoothCharacteristic.writeValueWithResponse(payload);
+      } else {
+        await bluetoothCharacteristic.writeValue(payload);
+      }
+
+      // ESP32가 다음 짧은 명령을 처리할 아주 작은 여유를 줍니다.
+      await sleep(35);
+    });
+
+    return bleWriteQueue;
+  }
+
+  async function sendMode(mode) {
     try {
-      await bluetoothCharacteristic.writeValue(
-        new TextEncoder().encode(mode)
-      );
+      await writeBLEText(mode);
     } catch (error) {
       console.error("명령 전송 실패:", error);
       alert("조명 명령을 보내지 못했어요. 연결 상태를 확인해 주세요.");
+    }
+  }
+
+  // TFT에 표시할 정보를 짧은 BLE 메시지 4개로 순차 전송
+  async function sendTFTInfo({ dateText, weatherText, tempText, cityText }) {
+    const messages = [
+      `TDATE:${dateText}`,
+      `TWX:${weatherText}`,
+      `TTEMP:${tempText}`,
+      `TCITY:${cityText}`
+    ];
+
+    for (const message of messages) {
+      await writeBLEText(message);
     }
   }
 
@@ -668,30 +691,29 @@
   }
 
   function weatherInfoFromCode(code, isDay) {
-    // Open-Meteo의 WMO Weather interpretation codes 기준
     if (code === 0) {
       return isDay
-        ? { icon: "☀️", label: "맑음", mode: "wx_sunny", modeLabel: "SUNNY LIGHT" }
-        : { icon: "🌙", label: "맑은 밤", mode: "wx_night", modeLabel: "NIGHT LIGHT" };
+        ? { icon: "☀️", label: "맑음", tftLabel: "SUNNY", mode: "wx_sunny", modeLabel: "SUNNY LIGHT" }
+        : { icon: "🌙", label: "맑은 밤", tftLabel: "NIGHT", mode: "wx_night", modeLabel: "NIGHT LIGHT" };
     }
 
     if ([1, 2, 3].includes(code)) {
-      return { icon: "☁️", label: code === 1 ? "대체로 맑음" : "흐림", mode: "wx_cloudy", modeLabel: "CLOUDY LIGHT" };
+      return { icon: "☁️", label: code === 1 ? "대체로 맑음" : "흐림", tftLabel: "CLOUDY", mode: "wx_cloudy", modeLabel: "CLOUDY LIGHT" };
     }
 
     if ([45, 48].includes(code)) {
-      return { icon: "🌫️", label: "안개", mode: "wx_fog", modeLabel: "FOG LIGHT" };
+      return { icon: "🌫️", label: "안개", tftLabel: "FOG", mode: "wx_fog", modeLabel: "FOG LIGHT" };
     }
 
     if ([51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82, 95, 96, 99].includes(code)) {
-      return { icon: "🌧️", label: "비", mode: "wx_rain", modeLabel: "RAIN LIGHT" };
+      return { icon: "🌧️", label: "비", tftLabel: "RAIN", mode: "wx_rain", modeLabel: "RAIN LIGHT" };
     }
 
     if ([71, 73, 75, 77, 85, 86].includes(code)) {
-      return { icon: "❄️", label: "눈", mode: "wx_snow", modeLabel: "SNOW LIGHT" };
+      return { icon: "❄️", label: "눈", tftLabel: "SNOW", mode: "wx_snow", modeLabel: "SNOW LIGHT" };
     }
 
-    return { icon: "🌦️", label: "변화가 있는 날씨", mode: "wx_cloudy", modeLabel: "WEATHER LIGHT" };
+    return { icon: "🌦️", label: "변화가 있는 날씨", tftLabel: "WEATHER", mode: "wx_cloudy", modeLabel: "WEATHER LIGHT" };
   }
 
   async function resolveWeatherPlace() {
@@ -705,6 +727,7 @@
       const position = await getCurrentPosition();
       return {
         name: "현재 위치",
+        tftName: "HERE",
         lat: position.coords.latitude,
         lon: position.coords.longitude
       };
@@ -715,6 +738,27 @@
     weatherCondition.textContent = `${place.name} 날씨를 확인하는 중…`;
     weatherDetail.textContent = "실시간 날씨 데이터를 불러오고 있어요.";
     return place;
+  }
+
+  // Open-Meteo가 반환한 지역 timezone 기준으로 TFT 날짜 생성
+  function formatTFTDate(timeZone) {
+    try {
+      const parts = new Intl.DateTimeFormat("en-US", {
+        timeZone: timeZone || undefined,
+        month: "short",
+        day: "2-digit",
+        weekday: "short"
+      }).formatToParts(new Date());
+
+      const month = parts.find(p => p.type === "month")?.value?.toUpperCase() || "";
+      const day = parts.find(p => p.type === "day")?.value || "";
+      const weekday = parts.find(p => p.type === "weekday")?.value?.toUpperCase() || "";
+
+      return `${month}${day} ${weekday}`;
+    } catch (e) {
+      console.warn("TFT 날짜 포맷 실패:", e);
+      return "DATE";
+    }
   }
 
   async function applyLiveWeather() {
@@ -763,7 +807,19 @@
         Number(current.is_day) === 1
       );
 
+      // 1) 기존 v2.4 날씨 조명 기능 유지
       await sendMode(info.mode);
+
+      // 2) TFT에 날짜 / 날씨 / 온도 / 도시 정보 추가 전송
+      const tftDate = formatTFTDate(data.timezone);
+      const tftTemp = `${Math.round(Number(current.temperature_2m))}C`;
+
+      await sendTFTInfo({
+        dateText: tftDate,
+        weatherText: info.tftLabel,
+        tempText: tftTemp,
+        cityText: place.tftName
+      });
 
       weatherTitle.textContent = `LIVE WEATHER · ${place.name}`;
       weatherIcon.textContent = info.icon;
@@ -771,7 +827,7 @@
       weatherDetail.textContent =
         `${Number(current.temperature_2m).toFixed(1)}°C · 풍속 ${Number(current.wind_speed_10m).toFixed(1)} km/h`;
       weatherMode.textContent =
-        `💡 ${info.modeLabel} 적용됨 · 연결을 해제해도 조명은 유지됩니다.`;
+        `💡 ${info.modeLabel} 적용됨 · TFT 정보도 업데이트되었습니다.`;
 
     } catch (error) {
       console.error("LIVE WEATHER 실패:", error);
@@ -814,13 +870,9 @@
       setButtonsEnabled(false);
       setStatus(false, "쇼케이스 전원을 종료하는 중…");
 
-      // ESP32에 전원 종료 모드 전달
-      await bluetoothCharacteristic.writeValue(
-        new TextEncoder().encode("poweroff")
-      );
+      await writeBLEText("poweroff");
 
-      // 명령이 ESP32에 반영될 시간을 잠깐 확보한 뒤 BLE 연결 해제
-      await new Promise(resolve => setTimeout(resolve, 250));
+      await sleep(250);
 
       if (bluetoothDevice?.gatt.connected) {
         bluetoothDevice.gatt.disconnect();
@@ -843,9 +895,7 @@
 
   function onDisconnected() {
     bluetoothCharacteristic = null;
-
-    // 같은 쇼케이스 재연결 시에는 인증을 유지합니다.
-    // 다른 쇼케이스를 선택하거나 탭/브라우저를 닫으면 다시 인증합니다.
+    bleWriteQueue = Promise.resolve();
 
     if (intentionalPowerOff) {
       setStatus(false, "Power Off · 쇼케이스 종료");
@@ -860,7 +910,6 @@
     connectBtn.disabled = false;
     connectBtn.textContent = "같은 쇼케이스 다시 연결";
 
-    // 연결이 끊긴 상태에서는 다른 쇼케이스도 선택할 수 있게 표시
     let otherBtn = document.getElementById("otherShowcaseBtn");
     if (otherBtn) {
       otherBtn.style.display = "block";
@@ -876,6 +925,7 @@
 
     bluetoothDevice = null;
     bluetoothCharacteristic = null;
+    bleWriteQueue = Promise.resolve();
     authenticated = false;
     authenticatedDeviceName = "";
 
@@ -900,7 +950,6 @@
 
     statusText.textContent = text;
 
-    // 연결 전에는 컴팩트한 시작 화면, 연결 후에는 넓은 제어 대시보드
     if (connected) {
       app.classList.add("connected-layout");
     } else {
